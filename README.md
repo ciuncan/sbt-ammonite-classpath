@@ -51,6 +51,13 @@ import $file.$
 @ mypackage.MyObject.hello() 
 Hello, World!
 ```
+
+This plugin also supports directly running Ammonite Repl from sbt. Similar to using above scopes you may launch the Ammonite Repl with full classpath and compile scope as follows:
+
+``` bash
+sbt Compile/fullClasspath/launchAmmoniteRepl
+```
+
 ## Related work
 
 [sbt-ammonite](https://github.com/alexarchambault/sbt-ammonite) is an sbt 0.13 plug-in to launch Ammonite. It automatically passes the classpath instead of creating a `sc` file. However, it does not support Almond.
