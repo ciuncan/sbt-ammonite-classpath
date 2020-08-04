@@ -22,7 +22,7 @@ object AmmoniteClasspath extends AutoPlugin {
   }
   import autoImport._
 
-  override def projectSettings: Seq[Def.Setting[_]] = (Seq {
+  override def projectSettings: Seq[Def.Setting[_]] = {
     val configuration = !Each(Seq(Compile, Test, Runtime))
     val classpathKey = !Each(Seq(fullClasspath, dependencyClasspath, managedClasspath, unmanagedClasspath))
 
@@ -67,5 +67,5 @@ object AmmoniteClasspath extends AutoPlugin {
         }
       }
     )
-  }).flatten
+  }
 }
