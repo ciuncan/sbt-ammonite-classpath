@@ -114,7 +114,7 @@ object AmmoniteClasspath extends AutoPlugin {
     import Def.parserToInput
     val parser = Def.spaceDelimited()
     Def.inputTask {
-      val foundMainClass = (run / mainClass).value getOrElse sys.error("No main class detected.")
+      val foundMainClass = (run / mainClass).value.get
       val userArgs = parser.parsed
       val args = Seq(
         "--predef",       (backingConf / classpath / exportToAmmoniteScript).value.absolutePath,
