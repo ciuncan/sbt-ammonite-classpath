@@ -90,7 +90,6 @@ object AmmoniteClasspath extends AutoPlugin {
         Seq(
           libraryDependencies := Seq(("com.lihaoyi" %% "ammonite" % (ammConf / ammoniteVersion).value).cross(CrossVersion.full)),
           connectInput        := true,
-          initialCommands     := (backingConf / console / initialCommands).value,
           run                 := runTask(ammConf, backingConf, fullClasspath, ammConf / run / runner).evaluated
         ) ++
         allClasspathKeys.map(classpathKey =>
