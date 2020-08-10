@@ -40,18 +40,12 @@ object AmmoniteClasspath extends AutoPlugin {
       ammoniteRunSettings(AmmoniteTest, Test) ++
       ammoniteRunSettings(AmmoniteRuntime, Runtime)
 
-  def baseSettings = Seq(
+  def baseSettings: Seq[Def.Setting[_]] = Seq(
     ammoniteVersion := {
-      val fromEnv = sys.env.get("AMMONITE_VERSION")
-      def fromProps = sys.props.get("ammonite.version")
-      val defaultVersion =
-        scalaBinaryVersion.value match {
-          case "2.10" => "1.0.3"
-          case _      => "2.2.0"
-        }
-      fromEnv
-        .orElse(fromProps)
-        .getOrElse(defaultVersion)
+      scalaBinaryVersion.value match {
+        case "2.10" => "1.0.3"
+        case _      => "latest.release"
+      }
     }
   )
 
@@ -89,13 +83,12 @@ object AmmoniteClasspath extends AutoPlugin {
     )
   }
 
-  def ammoniteRunSettings(ammConf: Configuration, backingConf: Configuration) =
+  def ammoniteRunSettings(ammConf: Configuration, backingConf: Configuration): Seq[Def.Setting[_]] =
     inConfig(ammConf)(
       Defaults.compileSettings ++
         Classpaths.ivyBaseSettings ++
         Seq(
           libraryDependencies := Seq(("com.lihaoyi" %% "ammonite" % (ammConf / ammoniteVersion).value).cross(CrossVersion.full)),
-          mainClass           := Some("ammonite.Main"),
           connectInput        := true,
           initialCommands     := (backingConf / console / initialCommands).value,
           run                 := runTask(ammConf, backingConf, fullClasspath, ammConf / run / runner).evaluated
@@ -114,14 +107,14 @@ object AmmoniteClasspath extends AutoPlugin {
     import Def.parserToInput
     val parser = Def.spaceDelimited()
     Def.inputTask {
-      val foundMainClass = (run / mainClass).value.get
+      val mainClass = "ammonite.Main"
       val userArgs = parser.parsed
       val args = Seq(
         "--predef",       (backingConf / classpath / exportToAmmoniteScript).value.absolutePath,
         "--predef-code",  (ammConf / console / initialCommands).value
       ) ++ userArgs
       val ammoniteOnlyClasspathFiles = sbt.Attributed.data((ammConf / managedClasspath).value)
-      scalaRun.value.run(foundMainClass, ammoniteOnlyClasspathFiles, args, streams.value.log).get
+      scalaRun.value.run(mainClass, ammoniteOnlyClasspathFiles, args, streams.value.log).get
     }
   }
 
