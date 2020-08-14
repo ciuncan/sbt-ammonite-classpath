@@ -27,27 +27,23 @@ object AmmoniteClasspath extends AutoPlugin {
     lazy val AmmoniteRuntime = config("ammonite-runtime")
       .extend(Runtime)
       .withDescription("Ammonite config to run REPL, similar to Runtime config.")
+    
+    lazy val launchAmmoniteRepl = taskKey[Unit]("Run Ammonite REPL")
 
     lazy val ammoniteVersion = settingKey[String]("Ammonite REPL Version")
   }
 
   import autoImport._
 
+  override def globalSettings: Seq[Def.Setting[_]] = Seq(
+    ammoniteVersion := "latest.release"
+  )
+
   override def projectSettings: Seq[Def.Setting[_]] =
-    baseSettings ++
-      classpathExportSettings ++
+    classpathExportSettings ++
       ammoniteRunSettings(Ammonite, Compile) ++
       ammoniteRunSettings(AmmoniteTest, Test) ++
       ammoniteRunSettings(AmmoniteRuntime, Runtime)
-
-  def baseSettings: Seq[Def.Setting[_]] = Seq(
-    ammoniteVersion := {
-      scalaBinaryVersion.value match {
-        case "2.10" => "1.0.3"
-        case _      => "latest.release"
-      }
-    }
-  )
 
   private val allClasspathKeys = Seq(fullClasspath, dependencyClasspath, managedClasspath, unmanagedClasspath)
 
@@ -88,30 +84,35 @@ object AmmoniteClasspath extends AutoPlugin {
       Defaults.compileSettings ++
         Classpaths.ivyBaseSettings ++
         Seq(
-          libraryDependencies := Seq(("com.lihaoyi" %% "ammonite" % (ammConf / ammoniteVersion).value).cross(CrossVersion.full)),
-          connectInput        := true,
-          run                 := runTask(ammConf, backingConf, fullClasspath, ammConf / run / runner).evaluated
+          libraryDependencies     := Seq(("com.lihaoyi" %% "ammonite" % (ammConf / ammoniteVersion).value).cross(CrossVersion.full)),
+          connectInput            := true,
+          console                 := runTask(ammConf, backingConf, fullClasspath, ammConf / run / runner).value
         ) ++
         allClasspathKeys.map(classpathKey =>
-          classpathKey / run  := runTask(ammConf, backingConf, classpathKey, ammConf / run / runner).evaluated
+          classpathKey / console  := runTask(ammConf, backingConf, classpathKey, ammConf / run / runner).value
         )
-    )
+    ) ++ Seq(
+      backingConf / launchAmmoniteRepl := (ammConf / console).value,
+      backingConf / launchAmmoniteRepl / initialCommands := (ammConf / console / initialCommands).value
+    ) ++ 
+      allClasspathKeys.map(classpathKey =>
+        backingConf / classpathKey / launchAmmoniteRepl := (ammConf / classpathKey / console).value
+      )
 
   private def runTask(
       ammConf: Configuration,
       backingConf: Configuration,
       classpath: TaskKey[Classpath],
       scalaRun: Def.Initialize[Task[ScalaRun]],
-  ): Def.Initialize[InputTask[Unit]] = {
+  ): Def.Initialize[Task[Unit]] = {
     import Def.parserToInput
     val parser = Def.spaceDelimited()
-    Def.inputTask {
+    Def.task {
       val mainClass = "ammonite.Main"
-      val userArgs = parser.parsed
       val args = Seq(
         "--predef",       (backingConf / classpath / exportToAmmoniteScript).value.absolutePath,
-        "--predef-code",  (ammConf / console / initialCommands).value
-      ) ++ userArgs
+        "--predef-code",  (backingConf / launchAmmoniteRepl / initialCommands).value
+      )
       val ammoniteOnlyClasspathFiles = sbt.Attributed.data((ammConf / managedClasspath).value)
       scalaRun.value.run(mainClass, ammoniteOnlyClasspathFiles, args, streams.value.log).get
     }
